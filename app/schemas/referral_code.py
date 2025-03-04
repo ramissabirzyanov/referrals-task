@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import BaseModel
 from datetime import datetime
 from app.schemas.user import UserResponse
@@ -24,7 +22,7 @@ class ReferralCodeResponse(ReferralCodeBase):
 
 class ReferralsResponse(BaseModel):
     user: UserResponse
-    invited_users: List[UserResponse] = []
+    invited_users: list[UserResponse] = []
 
     class Config:
         from_attributes = True
