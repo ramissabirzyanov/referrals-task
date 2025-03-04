@@ -12,4 +12,4 @@ class ReferralCode(Base):
     expires_at: Mapped[datetime] = mapped_column(nullable=False)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False)
 
-    owner: Mapped["User"] = relationship("User", back_populates="referral_code")
+    owner: Mapped["User"] = relationship("User", back_populates="referral_code") # type: ignore
