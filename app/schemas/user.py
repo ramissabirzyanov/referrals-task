@@ -7,6 +7,9 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    
+    class Config:
+        from_attributes = True
 
 
 class UserResponse(UserBase):

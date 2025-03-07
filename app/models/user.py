@@ -1,7 +1,12 @@
-from app.db.base import Base
+from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, ForeignKey
+
+from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.referral_code import ReferralCode
 
 
 class User(Base):
@@ -12,7 +17,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     invited_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
-    referral_code: Mapped["ReferralCode"] = relationship("ReferralCode", back_populates="owner") # type: ignore
+    referral_code: Mapped["ReferralCode"] = relationship("ReferralCode", back_populates="owner")
     invited_users: Mapped[list["User"]] = relationship(
         "User", 
         back_populates="invited_by", 
