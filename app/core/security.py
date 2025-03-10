@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta, timezone
 
 from app.core.settings import settings
 
@@ -16,13 +16,13 @@ def encode_jwt(
     payload: dict,
     private_key: str = PRIVATE_KEY,
     algorithm: str = ALGORITHM,
-    expires_minutes: datetime.timedelta = datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expires_minutes: timedelta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 ):
     """
     Кодирует данные в JWT токен.
     """
     to_encode = payload.copy()
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.now(timezone.utc)
     expires_at = now + expires_minutes
     to_encode.update(exp=expires_at, iat=now)
     encoded = jwt.encode(to_encode, private_key, algorithm=algorithm)
@@ -38,7 +38,7 @@ def decode_jwt(
     Декодирует JWT токен и возвращает данные.
     """
     try:
-        decoded = jwt.decode(token, public_key, algorithms=[algorithm])
+        decoded = jwt.decode(token, public_key, algorithms=[algorithm], options={"verify_exp": True})
         return decoded
     except jwt.InvalidTokenError as e:
         raise ValueError("Invalid token") from e

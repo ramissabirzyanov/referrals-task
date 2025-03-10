@@ -15,6 +15,7 @@ class ReferralCode(Base):
     
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    active: Mapped[bool] = mapped_column(default=False)
     expires_at: Mapped[datetime] = mapped_column(nullable=False)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False)
 

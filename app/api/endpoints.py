@@ -1,10 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import encode_jwt, validate_password
 from app.schemas.auth import Token
-from app.schemas.user import UserResponse, UserCreate
+from app.models.user import User
+from app.models.referral_code import ReferralCode
+from app.api.dependencies import get_current_user
+from app.schemas.user import UserResponse, UserCreate, Users
+from app.schemas.referral_code import UserRefCodes
 from app.services.user_service import UserService
+from app.services.referral_code_service import ReferralCodeService
 from app.db.session import get_db
 
 
@@ -30,3 +35,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
         )
     access_token = encode_jwt({"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.get("/{user_id}/refcodes", response_model=UserRefCodes)
+async def get_user_referrals(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    service = ReferralCodeService(db)
+    user_referral_code = await service.get_user_referral_codes(current_user.id)
+    return UserRefCodes(refcodes=user_referral_code)

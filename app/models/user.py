@@ -26,5 +26,5 @@ class User(Base):
     invited_by: Mapped["User"] = relationship(
         "User",
         back_populates="invited_users", 
-        remote_side=[id]
+        remote_side=[invited_by_id]
     )
