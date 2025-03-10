@@ -18,7 +18,3 @@ class UserResponse(UserBase):
     
     class Config:
         from_attributes = True
-
-
-class Users(BaseModel):
-    users: list[UserResponse]

@@ -6,8 +6,10 @@ from app.schemas.user import UserResponse
 class ReferralCodeBase(BaseModel):
     code: str
     expires_at: datetime
-    active: bool
+    active: bool = False
 
+    class Config:
+        from_attributes = True
 
 class ReferralCodeCreate(ReferralCodeBase):
     pass
@@ -29,4 +31,7 @@ class ReferralsResponse(BaseModel):
         from_attributes = True
 
 class UserRefCodes(BaseModel):
-    refcodes: list[ReferralCodeBase]
+    referral_codes: list[ReferralCodeBase]
+    
+    class Config:
+        from_attributes = True
