@@ -21,8 +21,8 @@ class ReferralCode(Base):
 
     owner: Mapped["User"] = relationship("User", back_populates="referral_code")
 
-    # @validates('expires_at')
-    # def validate_expire_at(self, key, expires_at):
-    #     if expires_at < datetime.now(timezone.utc):
-    #         self.active = False
-    #     return expires_at
+    @validates('expires_at')
+    def validate_expire_at(self, key, expires_at):
+        if expires_at < datetime.now(timezone.utc):
+            self.active = False
+        return expires_at

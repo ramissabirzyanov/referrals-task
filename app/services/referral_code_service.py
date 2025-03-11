@@ -1,6 +1,6 @@
-import json
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import delete
 from redis import Redis
 
 from app.models.referral_code import ReferralCode
@@ -72,3 +72,18 @@ class ReferralCodeService:
         )
         referral_code = result.scalars().first()
         return ReferralCodeResponse.model_validate(referral_code)
+
+
+    async def delete_referral_code(self, code_id: int, owner_id: int) -> bool:
+        result = await self.db.execute(
+            select(ReferralCode).where(ReferralCode.id == code_id, ReferralCode.owner_id == owner_id)
+        )
+        referral_code = result.scalars().first()
+        
+        if not referral_code:
+            return False
+        
+        await self.db.execute(delete(ReferralCode).where(ReferralCode.id == code_id))
+        await self.db.commit()
+        return True 
+

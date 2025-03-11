@@ -11,6 +11,7 @@ class ReferralCodeBase(BaseModel):
     class Config:
         from_attributes = True
 
+
 class ReferralCodeCreate(ReferralCodeBase):
     pass
 
@@ -29,6 +30,7 @@ class ReferralsResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class UserRefCodes(BaseModel):
     referral_codes: list[ReferralCodeBase]

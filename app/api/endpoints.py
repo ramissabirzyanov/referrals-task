@@ -7,6 +7,7 @@ from app.core.redis import get_redis
 from app.core.security import encode_jwt, validate_password
 from app.schemas.auth import Token
 from app.models.user import User
+from app.models.referral_code import ReferralCode
 from app.api.dependencies import get_current_user
 from app.schemas.user import UserResponse, UserCreate
 from app.schemas.referral_code import UserRefCodes, ReferralCodeResponse, ReferralCodeCreate
@@ -88,4 +89,15 @@ async def get_referral_code_detail(
     return refcode_detail
 
 
+@router.delete("/{user_id}/refcodes/{code_id}")
+async def delete_referral_code(
+    code_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    service = ReferralCodeService(db)
+    referral_code = await service.delete_referral_code(code_id, current_user.id)
 
+    if not referral_code:
+        raise HTTPException(status_code=404, detail="Referral code not found or access denied")
+    return {"detail": "Referral code deleted successfully"}
