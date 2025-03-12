@@ -25,26 +25,6 @@ class ReferralCodeService:
         return ReferralCodeResponse.model_validate(new_referral_code)
 
 
-    async def activate_referral_code(self, code_id: int) -> ReferralCodeResponse:
-        referral_code = await self.db.get(ReferralCode, code_id)
-        if not referral_code:
-            raise ValueError("The referral code is not founded")
-
-        existing_active_code = await self.db.execute(
-            select(ReferralCode)
-            .where(
-                ReferralCode.owner_id == referral_code.owner_id,
-                ReferralCode.active == True
-            )
-        )
-        if existing_active_code.scalars().first():
-            raise ValueError("The user has active referral code already")
-        referral_code.active = True
-        await self.db.commit()
-        await self.db.refresh(referral_code)
-        return referral_code
-
-
     async def get_user_referral_codes(self, owner_id: int) -> UserRefCodes:
         cache_key = f"user:{owner_id}:refcodes"
         cached_data = await self.redis_client.get(cache_key)
@@ -66,24 +46,26 @@ class ReferralCodeService:
         return referral_code
 
 
-    async def get_referral_code_detail(self, code_id: int, owner_id: int) -> ReferralCodeResponse:
-        result = await self.db.execute(
-        select(ReferralCode).where(ReferralCode.id == code_id, ReferralCode.owner_id == owner_id)
-        )
-        referral_code = result.scalars().first()
+    async def get_referral_code_by_id(self, code_id:int) -> ReferralCode:
+        referral_code = await self.db.get(ReferralCode, code_id)
+        return referral_code
+
+
+    async def get_referral_code_detail(self, referral_code: ReferralCode) -> ReferralCodeResponse:
+        return ReferralCodeResponse.model_validate(referral_code)
+    
+
+    async def activate_referral_code(self, referral_code: ReferralCode) -> ReferralCodeResponse:
+        if referral_code.active:
+            raise ValueError("Referral code is already active")
+
+        referral_code.active = True
+        await self.db.commit()
+        await self.db.refresh(referral_code)
         return ReferralCodeResponse.model_validate(referral_code)
 
 
-    async def delete_referral_code(self, code_id: int, owner_id: int) -> bool:
-        result = await self.db.execute(
-            select(ReferralCode).where(ReferralCode.id == code_id, ReferralCode.owner_id == owner_id)
-        )
-        referral_code = result.scalars().first()
-        
-        if not referral_code:
-            return False
-        
-        await self.db.execute(delete(ReferralCode).where(ReferralCode.id == code_id))
+    async def delete_referral_code(self, referral_code: ReferralCode) -> dict:
+        await self.db.delete(referral_code)
         await self.db.commit()
-        return True 
-
+        return {"detail": "Referral code deleted successfully"}

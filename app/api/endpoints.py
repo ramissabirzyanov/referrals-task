@@ -8,7 +8,7 @@ from app.core.security import encode_jwt, validate_password
 from app.schemas.auth import Token
 from app.models.user import User
 from app.models.referral_code import ReferralCode
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_current_user, check_existing_and_owner_referral_code
 from app.schemas.user import UserResponse, UserCreate
 from app.schemas.referral_code import UserRefCodes, ReferralCodeResponse, ReferralCodeCreate
 from app.services.user_service import UserService
@@ -44,7 +44,7 @@ async def login(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.post("/{user_id}/create_refcode", response_model=ReferralCodeResponse)
+@router.post("/create_refcode", response_model=ReferralCodeResponse)
 async def create_referral_code(
     code_data: ReferralCodeCreate,
     db: AsyncSession = Depends(get_db),
@@ -53,51 +53,44 @@ async def create_referral_code(
     service = ReferralCodeService(db)
     refcode = await service.get_referral_code_by_code(code_data.code)
     if refcode:
-        raise HTTPException(status_code=400, detail="Same code already exist")
+        raise HTTPException(status_code=400, detail="Same code exists already")
     return await service.create_referral_code(code_data, current_user_id=current_user.id)
     
 
-@router.get("/{user_id}/refcodes", response_model=UserRefCodes)
+@router.get("/refcodes", response_model=UserRefCodes)
 async def get_user_referrals(
-    user_id: int,
     db: AsyncSession = Depends(get_db),
     redis_client: Redis = Depends(get_redis),
     current_user: User = Depends(get_current_user)
 ):
     service = ReferralCodeService(db)
-    if current_user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only access your own referral codes"
-        )
     return await service.get_user_referral_codes(current_user.id)
 
 
-@router.get("/{user_id}/refcodes/{code_id}", response_model=ReferralCodeResponse)
+@router.get("/refcodes/{code_id}", response_model=ReferralCodeResponse)
 async def get_referral_code_detail(
-    code_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    referral_code: ReferralCode = Depends(check_existing_and_owner_referral_code),
 ):
     service = ReferralCodeService(db)
-    refcode_detail =  await service.get_referral_code_detail(code_id=code_id, owner_id=current_user.id)
-    if not refcode_detail:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Referral code not found or access denied"
-        )
+    refcode_detail =  await service.get_referral_code_detail(referral_code)
     return refcode_detail
 
 
-@router.delete("/{user_id}/refcodes/{code_id}")
+@router.delete("/refcodes/{code_id}")
 async def delete_referral_code(
-    code_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    referral_code: ReferralCode = Depends(check_existing_and_owner_referral_code)
 ):
     service = ReferralCodeService(db)
-    referral_code = await service.delete_referral_code(code_id, current_user.id)
+    referral_code = await service.delete_referral_code(referral_code)
 
-    if not referral_code:
-        raise HTTPException(status_code=404, detail="Referral code not found or access denied")
-    return {"detail": "Referral code deleted successfully"}
+
+@router.patch("refcodes/{code_id}", response_model=ReferralCodeResponse)
+async def activate_referral_code(
+    referral_code: ReferralCode = Depends(check_existing_and_owner_referral_code),
+    db: AsyncSession = Depends(get_db),
+):
+    service = ReferralCodeService(db)
+    active_referral_code = await service.activate_referral_code(referral_code)
+    return active_referral_code
