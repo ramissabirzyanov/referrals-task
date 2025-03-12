@@ -9,8 +9,8 @@ from app.schemas.auth import Token
 from app.models.user import User
 from app.models.referral_code import ReferralCode
 from app.api.dependencies import get_current_user, check_existing_and_owner_referral_code
-from app.schemas.user import UserResponse, UserCreate
-from app.schemas.referral_code import UserRefCodes, ReferralCodeResponse, ReferralCodeCreate
+from app.schemas.user import UserResponse, UserCreate, UserCreateByRefCode
+from app.schemas.referral_code import UserRefCodes, ReferralCodeResponse, ReferralCodeCreate, ReferralsResponse
 from app.services.user_service import UserService
 from app.services.referral_code_service import ReferralCodeService
 from app.db.session import get_db
@@ -25,6 +25,20 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
     return await user_service.create_user(user)
+
+
+@router.post("/register/referral_code", response_model=UserResponse)
+async def сreate_user_by_refcode(
+    user_data: UserCreateByRefCode,
+    db: AsyncSession = Depends(get_db),
+):
+    service = UserService(db)
+    new_user = await service.create_user_by_refcode(user_data)
+
+    if new_user is None:
+        raise HTTPException(status_code=400, detail="Invalid or inactive referral code.")
+
+    return new_user
 
 
 @router.post("/login", response_model=Token)
@@ -67,6 +81,18 @@ async def get_user_referrals(
     return await service.get_user_referral_codes(current_user.id)
 
 
+@router.get("/{referrer_id}/referrals", response_model=ReferralsResponse)
+async def get_invited_users_by_referrer_id(
+    referrer_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    service = ReferralCodeService(db)
+    try:
+        return await service.get_invited_users_by_referrer_id(referrer_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="User not found")
+
+
 @router.get("/refcodes/{code_id}", response_model=ReferralCodeResponse)
 async def get_referral_code_detail(
     db: AsyncSession = Depends(get_db),
@@ -100,3 +126,17 @@ async def activate_referral_code(
 
     active_referral_code = await service.activate_referral_code(referral_code)
     return active_referral_code
+
+
+@router.get("/refcodes/by-email/{email}", response_model=ReferralCodeResponse)
+async def get_referral_code_by_email(
+    email: str,
+    db: AsyncSession = Depends(get_db),
+):
+    service = ReferralCodeService(db)
+    referral_code = await service.get_referral_code_by_referrer_email(email)
+
+    if referral_code is None:
+        raise HTTPException(status_code=404, detail="Active referral code not found")
+
+    return referral_code

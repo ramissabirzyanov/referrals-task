@@ -5,7 +5,9 @@ from sqlalchemy.future import select
 from redis import Redis
 
 from app.models.referral_code import ReferralCode
-from app.schemas.referral_code import ReferralCodeCreate, ReferralCodeResponse, ReferralCodeBase, UserRefCodes
+from app.models.user import User
+from app.schemas.referral_code import ReferralCodeCreate, ReferralCodeResponse, UserRefCodes, ReferralsResponse
+from app.schemas.user import UserResponse
 
 
 class ReferralCodeService:
@@ -36,7 +38,7 @@ class ReferralCodeService:
 
         result = await self.db.execute(select(ReferralCode).where(ReferralCode.owner_id == owner_id))
         referral_codes = result.scalars().all()
-        refcodes_pydantic = [ReferralCodeBase.model_validate(refcode) for refcode in referral_codes]
+        refcodes_pydantic = [ReferralCodeResponse.model_validate(refcode) for refcode in referral_codes]
 
         if self.redis_client:
             await self.redis_client.setex(cache_key, 600, UserRefCodes(referral_codes=refcodes_pydantic).model_dump_json())
@@ -79,3 +81,32 @@ class ReferralCodeService:
         await self.db.commit()
         await self.clear_user_referral_codes_cache(referral_code.owner_id)
         return {"detail": "Referral code deleted successfully"}
+
+
+    async def get_referral_code_by_referrer_email(self, email: str) -> Optional[ReferralCodeResponse]:
+        """
+        Получает активный реферальный код по email реферера.
+        """
+        result = await self.db.execute(
+            select(ReferralCode)
+            .join(User, ReferralCode.owner_id == User.id)
+            .where(User.email == email, ReferralCode.active == True)
+        )
+        referral_code = result.scalars().first()
+        if referral_code is None:
+            return None
+
+        return ReferralCodeResponse.model_validate(referral_code)
+
+
+    async def get_invited_users_by_referrer_id(self, referrer_id: int) -> ReferralsResponse:
+        user = await self.db.get(User, referrer_id)
+        result = await self.db.execute(
+            select(User)
+            .where(User.invited_by_id == referrer_id)
+        )
+        invited_users = result.scalars().all()
+        return ReferralsResponse(
+            user=UserResponse.model_validate(user),
+            invited_users=[UserResponse.model_validate(user) for user in invited_users]
+        )

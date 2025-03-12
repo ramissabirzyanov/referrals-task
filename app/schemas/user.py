@@ -11,6 +11,9 @@ class UserCreate(UserBase):
     class Config:
         from_attributes = True
 
+class UserCreateByRefCode(UserCreate):
+    referral_code: str
+
 
 class UserResponse(UserBase):
     id: int

@@ -17,7 +17,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     invited_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
-    referral_code: Mapped["ReferralCode"] = relationship("ReferralCode", back_populates="owner")
+    referral_code: Mapped[list["ReferralCode"]] = relationship("ReferralCode", back_populates="owner")
     invited_users: Mapped[list["User"]] = relationship(
         "User", 
         back_populates="invited_by", 
