@@ -1,6 +1,7 @@
+from typing import Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import delete
 from redis import Redis
 
 from app.models.referral_code import ReferralCode
@@ -8,9 +9,9 @@ from app.schemas.referral_code import ReferralCodeCreate, ReferralCodeResponse, 
 
 
 class ReferralCodeService:
-    def __init__(self, db: AsyncSession, redis: Redis):
+    def __init__(self, db: AsyncSession, redis_client: Optional[Redis] = None):
         self.db = db
-        self.redis_client = redis
+        self.redis_client = redis_client
 
 
     async def create_referral_code(
@@ -26,18 +27,28 @@ class ReferralCodeService:
 
 
     async def get_user_referral_codes(self, owner_id: int) -> UserRefCodes:
-        cache_key = f"user:{owner_id}:refcodes"
-        cached_data = await self.redis_client.get(cache_key)
-        
-        if cached_data:
-                cashed_refcodes = UserRefCodes.model_validate_json(cached_data)
-                return cashed_refcodes
+        if self.redis_client:
+            cache_key = f"user:{owner_id}:refcodes"
+            cached_data = await self.redis_client.get(cache_key)
+            if cached_data:
+                    cashed_refcodes = UserRefCodes.model_validate_json(cached_data)
+                    return cashed_refcodes
 
         result = await self.db.execute(select(ReferralCode).where(ReferralCode.owner_id == owner_id))
         referral_codes = result.scalars().all()
         refcodes_pydantic = [ReferralCodeBase.model_validate(refcode) for refcode in referral_codes]
-        await self.redis_client.setex(cache_key, 600, UserRefCodes(refcodes=refcodes_pydantic).model_dump_json())
+
+        if self.redis_client:
+            await self.redis_client.setex(cache_key, 600, UserRefCodes(referral_codes=refcodes_pydantic).model_dump_json())
+
         return UserRefCodes(referral_codes=refcodes_pydantic)
+
+
+    async def clear_user_referral_codes_cache(self, owner_id: int) -> None:
+            """Функция для очистки кеша."""
+            if self.redis_client:
+                cache_key = f"user:{owner_id}:refcodes"
+                await self.redis_client.delete(cache_key)
 
 
     async def get_referral_code_by_code(self, code: str) -> ReferralCode:
@@ -56,16 +67,15 @@ class ReferralCodeService:
     
 
     async def activate_referral_code(self, referral_code: ReferralCode) -> ReferralCodeResponse:
-        if referral_code.active:
-            raise ValueError("Referral code is already active")
-
         referral_code.active = True
         await self.db.commit()
         await self.db.refresh(referral_code)
+        await self.clear_user_referral_codes_cache(referral_code.owner_id)
         return ReferralCodeResponse.model_validate(referral_code)
 
 
     async def delete_referral_code(self, referral_code: ReferralCode) -> dict:
         await self.db.delete(referral_code)
         await self.db.commit()
+        await self.clear_user_referral_codes_cache(referral_code.owner_id)
         return {"detail": "Referral code deleted successfully"}

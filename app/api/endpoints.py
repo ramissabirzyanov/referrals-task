@@ -23,7 +23,7 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
     user_service = UserService(db)
     db_user = await user_service.get_user_by_email(user.email)
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
     return await user_service.create_user(user)
 
 
@@ -53,7 +53,7 @@ async def create_referral_code(
     service = ReferralCodeService(db)
     refcode = await service.get_referral_code_by_code(code_data.code)
     if refcode:
-        raise HTTPException(status_code=400, detail="Same code exists already")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Same code exists already")
     return await service.create_referral_code(code_data, current_user_id=current_user.id)
     
 
@@ -63,7 +63,7 @@ async def get_user_referrals(
     redis_client: Redis = Depends(get_redis),
     current_user: User = Depends(get_current_user)
 ):
-    service = ReferralCodeService(db)
+    service = ReferralCodeService(db, redis_client)
     return await service.get_user_referral_codes(current_user.id)
 
 
@@ -80,17 +80,23 @@ async def get_referral_code_detail(
 @router.delete("/refcodes/{code_id}")
 async def delete_referral_code(
     db: AsyncSession = Depends(get_db),
-    referral_code: ReferralCode = Depends(check_existing_and_owner_referral_code)
-):
-    service = ReferralCodeService(db)
-    referral_code = await service.delete_referral_code(referral_code)
-
-
-@router.patch("refcodes/{code_id}", response_model=ReferralCodeResponse)
-async def activate_referral_code(
     referral_code: ReferralCode = Depends(check_existing_and_owner_referral_code),
-    db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis)
 ):
-    service = ReferralCodeService(db)
+    service = ReferralCodeService(db, redis_client)
+    return await service.delete_referral_code(referral_code)
+
+
+@router.patch("/refcodes/{code_id}", response_model=ReferralCodeResponse)
+async def activate_referral_code(
+    db: AsyncSession = Depends(get_db),
+    referral_code: ReferralCode = Depends(check_existing_and_owner_referral_code),
+    redis_client: Redis = Depends(get_redis)
+):
+    service = ReferralCodeService(db, redis_client)
+    
+    if referral_code.active is True:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Referral code is already active")
+
     active_referral_code = await service.activate_referral_code(referral_code)
     return active_referral_code
