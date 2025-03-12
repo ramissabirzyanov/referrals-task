@@ -20,11 +20,11 @@ router = APIRouter()
 
 @router.post("/register", response_model=UserResponse)
 async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
-    user_service = UserService(db)
-    db_user = await user_service.get_user_by_email(user.email)
+    service = UserService(db)
+    db_user = await service.get_user_by_email(user.email)
     if db_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-    return await user_service.create_user(user)
+    return await service.create_user(user)
 
 
 @router.post("/register/referral_code", response_model=UserResponse)
@@ -62,9 +62,11 @@ async def login(
 async def create_referral_code(
     code_data: ReferralCodeCreate,
     db: AsyncSession = Depends(get_db),
+    redis_client: Redis = Depends(get_redis),
     current_user: User = Depends(get_current_user)
+
 ):
-    service = ReferralCodeService(db)
+    service = ReferralCodeService(db, redis_client)
     refcode = await service.get_referral_code_by_code(code_data.code)
     if refcode:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Same code exists already")
@@ -120,9 +122,8 @@ async def activate_referral_code(
     redis_client: Redis = Depends(get_redis)
 ):
     service = ReferralCodeService(db, redis_client)
-    
-    if referral_code.active is True:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Referral code is already active")
+    if await service.has_user_active_referral_code(referral_code.owner_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User has an active referral code already")
 
     active_referral_code = await service.activate_referral_code(referral_code)
     return active_referral_code

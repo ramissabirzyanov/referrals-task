@@ -2,6 +2,7 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import exists
 from redis import Redis
 
 from app.models.referral_code import ReferralCode
@@ -19,14 +20,13 @@ class ReferralCodeService:
     async def create_referral_code(
             self, referral_code: ReferralCodeCreate,
             current_user_id: int
-    ) -> ReferralCodeResponse:
-
+    ) -> ReferralCode:
         new_referral_code = ReferralCode(**referral_code.model_dump(), owner_id=current_user_id)
         self.db.add(new_referral_code)
         await self.db.commit()
         await self.db.refresh(new_referral_code)
         await self.clear_user_referral_codes_cache(current_user_id)
-        return ReferralCodeResponse.model_validate(new_referral_code)
+        return new_referral_code
 
 
     async def get_user_referral_codes(self, owner_id: int) -> UserRefCodes:
@@ -34,8 +34,8 @@ class ReferralCodeService:
             cache_key = f"user:{owner_id}:refcodes"
             cached_data = await self.redis_client.get(cache_key)
             if cached_data:
-                    cashed_refcodes = UserRefCodes.model_validate_json(cached_data)
-                    return cashed_refcodes
+                cashed_refcodes = UserRefCodes.model_validate_json(cached_data)
+                return cashed_refcodes
 
         result = await self.db.execute(select(ReferralCode).where(ReferralCode.owner_id == owner_id))
         referral_codes = result.scalars().all()
@@ -52,6 +52,7 @@ class ReferralCodeService:
             if self.redis_client:
                 cache_key = f"user:{owner_id}:refcodes"
                 await self.redis_client.delete(cache_key)
+                print(f"Cache cleared for user {owner_id}")
 
 
     async def get_referral_code_by_code(self, code: str) -> ReferralCode:
@@ -65,16 +66,23 @@ class ReferralCodeService:
         return referral_code
 
 
-    async def get_referral_code_detail(self, referral_code: ReferralCode) -> ReferralCodeResponse:
-        return ReferralCodeResponse.model_validate(referral_code)
+    async def get_referral_code_detail(self, referral_code: ReferralCode) -> ReferralCode:
+        return referral_code
     
 
-    async def activate_referral_code(self, referral_code: ReferralCode) -> ReferralCodeResponse:
+    async def has_user_active_referral_code(self, owner_id: int) -> bool:
+        result = await self.db.execute(
+            select(exists().where(ReferralCode.owner_id == owner_id, ReferralCode.active == True))
+        )
+        return result.scalar() 
+
+
+    async def activate_referral_code(self, referral_code: ReferralCode) -> ReferralCode:
         referral_code.active = True
         await self.db.commit()
         await self.db.refresh(referral_code)
         await self.clear_user_referral_codes_cache(referral_code.owner_id)
-        return ReferralCodeResponse.model_validate(referral_code)
+        return referral_code
 
 
     async def delete_referral_code(self, referral_code: ReferralCode) -> dict:
@@ -84,7 +92,7 @@ class ReferralCodeService:
         return {"detail": "Referral code deleted successfully"}
 
 
-    async def get_referral_code_by_referrer_email(self, email: str) -> Optional[ReferralCodeResponse]:
+    async def get_referral_code_by_referrer_email(self, email: str) -> Optional[ReferralCode]:
         """
         Получает активный реферальный код по email реферера.
         """
@@ -97,7 +105,7 @@ class ReferralCodeService:
         if referral_code is None:
             return None
 
-        return ReferralCodeResponse.model_validate(referral_code)
+        return referral_code
 
 
     async def get_invited_users_by_referrer_id(self, referrer_id: int) -> ReferralsResponse:

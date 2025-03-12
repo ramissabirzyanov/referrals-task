@@ -21,10 +21,13 @@ class User(Base):
     invited_users: Mapped[list["User"]] = relationship(
         "User", 
         back_populates="invited_by", 
-        remote_side=[id]
+        remote_side=[invited_by_id],
+        #foreign_keys="User.invited_by_id",
+        lazy="selectin"
     )
     invited_by: Mapped["User"] = relationship(
         "User",
         back_populates="invited_users", 
-        remote_side=[invited_by_id]
+        remote_side=[id],
+        lazy="selectin"
     )
