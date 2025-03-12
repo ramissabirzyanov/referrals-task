@@ -25,6 +25,7 @@ class ReferralCodeService:
         self.db.add(new_referral_code)
         await self.db.commit()
         await self.db.refresh(new_referral_code)
+        await self.clear_user_referral_codes_cache(current_user_id)
         return ReferralCodeResponse.model_validate(new_referral_code)
 
 

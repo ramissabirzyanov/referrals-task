@@ -26,7 +26,7 @@ class ReferralCodeResponse(ReferralCodeBase):
     @field_validator('expires_at')
     def check_expires_at(cls, expires_at: datetime) -> datetime:
         if expires_at and expires_at < datetime.now(timezone.utc):
-            raise ValueError("Code expiration date is over")
+            cls.active = False
         return expires_at
 
 
