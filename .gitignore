@@ -3,3 +3,4 @@ keys/
 .env
 .flake8
 dump.rdb
+.dockerignore
