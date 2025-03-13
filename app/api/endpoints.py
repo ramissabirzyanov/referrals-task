@@ -118,6 +118,7 @@ async def get_user_referrals(
 async def get_invited_users_by_referrer_id(
     referrer_id: int,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     service = ReferralCodeService(db)
     try:
@@ -157,6 +158,7 @@ async def activate_referral_code(
 async def get_referral_code_by_email(
     email: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     service = ReferralCodeService(db)
     referral_code = await service.get_referral_code_by_referrer_email(email)

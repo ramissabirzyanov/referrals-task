@@ -77,7 +77,7 @@ class ReferralCodeService:
     async def has_user_active_referral_code(self, owner_id: int) -> bool:
         """Проверка есть ли у пользователя активный код"""
         result = await self.db.execute(
-            select(exists().where(ReferralCode.owner_id == owner_id, ReferralCode.active is True))
+            select(exists().where(ReferralCode.owner_id == owner_id, ReferralCode.active == True))
         )
         return result.scalar()
 
@@ -103,7 +103,7 @@ class ReferralCodeService:
         result = await self.db.execute(
             select(ReferralCode)
             .join(User, ReferralCode.owner_id == User.id)
-            .where(User.email == email, ReferralCode.active is True)
+            .where(User.email == email, ReferralCode.active == True)
         )
         referral_code = result.scalars().first()
         if referral_code is None:

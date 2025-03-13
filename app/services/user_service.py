@@ -32,7 +32,7 @@ class UserService:
     async def create_user_by_refcode(self, user: UserCreateByRefCode) -> Optional[User]:
         result = await self.db.execute(
             select(ReferralCode)
-            .where(ReferralCode.code == user.referral_code, ReferralCode.active is True)
+            .where(ReferralCode.code == user.referral_code, ReferralCode.active == True)
             .options(
                 selectinload(ReferralCode.owner).selectinload(User.invited_users)
             )
