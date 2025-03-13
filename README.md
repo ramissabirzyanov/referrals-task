@@ -11,6 +11,40 @@ UI документация 	(Swagger/ReDoc).
 
 ***
 
+Все главные задачи выполнены, также реализовано кеширвоание с помощью Redis и контейнеризация.
+
 ## TODO
  - Тесты
  - Полноценный CRUD
+ - Добавить доп проверки перед удалением
+
+
+## BUILD
+
+Для сборки приложения используется Docker.
+
+**Выполните команды:**
+- Скопируйте репозиторий
+```bash
+git clone https://github.com/ramissabirzyanov/referrals-task.git
+cd referrals-task
+```
+- Создание файл .env в корне проекта. И установите в нём переменные на основе примера (.env.example).
+```bash
+touch .env
+```
+- Установите пременные для Postgres
+- Для инициализции priver_key выполните команду
+```bash
+openssl genpkey -algorithm RSA -out app/core/keys/jwt-private.pem
+```
+- Для инициализции public_key выполните команду
+```bash
+openssl rsa -pubout -in app/core/keys/jwt-private.pem -out app/core/keys/jwt-public.pem
+```
+- Запустите приложение
+```bash
+docker-compose up --build
+```
+
+Приложение запустится по адресу: http://127.0.0.1:8000/
