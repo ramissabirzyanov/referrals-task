@@ -15,6 +15,14 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
+    """
+    Получает текущего пользователя на основе JWT-токена.
+    Args:
+        token (str): JWT-токен, полученный из заголовка Authorization.
+        db (AsyncSession): Асинхронная сессия базы данных.
+    Returns:
+        User: Объект пользователя, если токен валиден и пользователь существует.
+    """
     try:
         payload = decode_jwt(token)
         email: str = payload.get("sub")
@@ -40,8 +48,9 @@ async def check_existing_and_owner_referral_code(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ReferralCode:
-
-    """Проверяет существование реферального кода и его принадлежность пользователю"""
+    """
+    Проверяет существование реферального кода и его принадлежность пользователю
+    """
 
     service = ReferralCodeService(db)
     referral_code = await service.get_referral_code_by_id(code_id)

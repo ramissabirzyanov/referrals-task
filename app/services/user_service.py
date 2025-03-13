@@ -14,6 +14,10 @@ class UserService:
         self.db = db
 
     async def create_user(self, user: UserCreate) -> User:
+        """
+        Создает нового пользователя в базе данных.
+        Пароль хешируется перед сохранением.
+        """
         hashed_password = hash_password(user.password)
         new_user = User(email=user.email, hashed_password=hashed_password)
         self.db.add(new_user)
@@ -22,14 +26,24 @@ class UserService:
         return new_user
 
     async def get_user_by_email(self, email: str) -> User:
+        """
+        Получает пользователя из бд через его email.
+        """
         result = await self.db.execute(select(User).where(User.email == email))
         return result.scalars().first()
 
     async def get_user_by_id(self, user_id: int) -> User:
+        """
+        Получает пользователя из бд через его id.
+        """
         result = await self.db.execute(select(User).where(User.id == user_id))
         return result.scalars().first()
 
     async def create_user_by_refcode(self, user: UserCreateByRefCode) -> Optional[User]:
+        """
+        Создает нового пользователя в базе данных с реферальным кодом.
+        Пароль хешируется перед сохранением.
+        """
         result = await self.db.execute(
             select(ReferralCode)
             .where(ReferralCode.code == user.referral_code, ReferralCode.active == True)

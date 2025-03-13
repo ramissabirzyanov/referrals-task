@@ -3,6 +3,9 @@ from pathlib import Path
 
 
 class Settings(BaseSettings):
+    """
+    Класс для хранения настроек приложения, загружаемых из переменных окружения.
+    """
     DATABASE_URL: str
     PRIVATE_KEY_PATH: Path
     PUBLIC_KEY_PATH: Path

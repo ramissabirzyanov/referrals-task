@@ -94,6 +94,9 @@ async def create_referral_code(
     current_user: User = Depends(get_current_user)
 
 ):
+    """
+    Создание нового реферального кода
+    """
     service = ReferralCodeService(db, redis_client)
     refcode = await service.get_referral_code_by_code(code_data.code)
     if refcode:
@@ -110,6 +113,9 @@ async def get_user_referrals(
     redis_client: Redis = Depends(get_redis),
     current_user: User = Depends(get_current_user)
 ):
+    """
+    Все реферальные коды пользователя.
+    """
     service = ReferralCodeService(db, redis_client)
     return await service.get_user_referral_codes(current_user.id)
 
@@ -120,6 +126,9 @@ async def get_invited_users_by_referrer_id(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """
+    Пользователи, которые зарегистрировались, используя реферальный код пользователя.
+    """
     service = ReferralCodeService(db)
     try:
         return await service.get_invited_users_by_referrer_id(referrer_id)
@@ -133,6 +142,9 @@ async def delete_referral_code(
     referral_code: ReferralCode = Depends(check_existing_and_owner_referral_code),
     redis_client: Redis = Depends(get_redis)
 ):
+    """
+    Удаление реферального кода
+    """
     service = ReferralCodeService(db, redis_client)
     return await service.delete_referral_code(referral_code)
 
@@ -143,6 +155,12 @@ async def activate_referral_code(
     referral_code: ReferralCode = Depends(check_existing_and_owner_referral_code),
     redis_client: Redis = Depends(get_redis)
 ):
+    """
+    Активация реферального кода.
+    Также проверяется наличие уже активного кода и срок его действия.
+    Если у пользователя уже есть активный код или срок кода истек,
+    то активировать код не получится. Будет 400я ошибка.
+    """
     service = ReferralCodeService(db, redis_client)
     if await service.has_user_active_referral_code(referral_code.owner_id) or \
             referral_code.is_code_expired():
@@ -160,6 +178,9 @@ async def get_referral_code_by_email(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """
+    Получение активного кода пользователя по его email-у.
+    """
     service = ReferralCodeService(db)
     referral_code = await service.get_referral_code_by_referrer_email(email)
     if referral_code is None:
