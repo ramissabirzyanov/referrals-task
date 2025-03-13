@@ -63,9 +63,6 @@ class ReferralCodeService:
         referral_code = await self.db.get(ReferralCode, code_id)
         return referral_code
 
-    async def get_referral_code_detail(self, referral_code: ReferralCode) -> ReferralCode:
-        return referral_code
-
     async def has_user_active_referral_code(self, owner_id: int) -> bool:
         result = await self.db.execute(
             select(exists().where(ReferralCode.owner_id == owner_id, ReferralCode.active is True))

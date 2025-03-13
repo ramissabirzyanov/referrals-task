@@ -14,7 +14,8 @@ from app.schemas.referral_code import (
     UserRefCodes,
     ReferralCodeResponse,
     ReferralCodeCreate,
-    ReferralsResponse
+    ReferralsResponse,
+    ReferralCodeBase
 )
 from app.services.user_service import UserService
 from app.services.referral_code_service import ReferralCodeService
@@ -26,6 +27,9 @@ router = APIRouter()
 
 @router.post("/register", response_model=UserResponse)
 async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
+    """
+    Регистрирует пользователя.
+    """
     service = UserService(db)
     db_user = await service.get_user_by_email(user.email)
     if db_user:
@@ -41,6 +45,12 @@ async def сreate_user_by_refcode(
     user_data: UserCreateByRefCode,
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Регистрирует пользователя по реферальному коду.
+    Args:
+        user_data (UserCreateByRefCode): Данные для регистрации с реферальным кодом.
+        db (AsyncSession, optional): Сессия базы данных. По умолчанию создаётся через Depends(get_db).
+    """
     service = UserService(db)
     new_user = await service.create_user_by_refcode(user_data)
     if new_user is None:
@@ -56,6 +66,12 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db)
 ):
+    """
+    Аутентифицирует пользователя и выдает JWT-токен.
+    Args:
+        form_data (OAuth2PasswordRequestForm): Данные для аутентификации (email и пароль).
+        db (AsyncSession, optional): Сессия базы данных. По умолчанию создаётся через Depends(get_db).
+    """
     user_service = UserService(db)
     user = await user_service.get_user_by_email(form_data.username)
     if not user or not validate_password(form_data.password, user.hashed_password):
@@ -108,16 +124,6 @@ async def get_invited_users_by_referrer_id(
         raise HTTPException(status_code=404, detail="User not found")
 
 
-@router.get("/refcodes/{code_id}", response_model=ReferralCodeResponse)
-async def get_referral_code_detail(
-    db: AsyncSession = Depends(get_db),
-    referral_code: ReferralCode = Depends(check_existing_and_owner_referral_code),
-):
-    service = ReferralCodeService(db)
-    refcode_detail = await service.get_referral_code_detail(referral_code)
-    return refcode_detail
-
-
 @router.delete("/refcodes/{code_id}")
 async def delete_referral_code(
     db: AsyncSession = Depends(get_db),
@@ -144,7 +150,7 @@ async def activate_referral_code(
     return active_referral_code
 
 
-@router.get("/refcodes/{email}", response_model=ReferralCodeResponse)
+@router.get("/refcodes/{email}", response_model=ReferralCodeBase)
 async def get_referral_code_by_email(
     email: str,
     db: AsyncSession = Depends(get_db),

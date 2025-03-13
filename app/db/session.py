@@ -9,5 +9,11 @@ AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=F
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Асинхронный генератор, предоставляющий сессию SQLAlchemy для работы с базой данных.
+
+    Используется как зависимость в FastAPI для внедрения сессии в маршруты.
+    После завершения работы маршрута сессия автоматически закрывается.
+    """
     async with AsyncSessionLocal() as session:
         yield session
