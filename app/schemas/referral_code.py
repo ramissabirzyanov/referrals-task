@@ -1,5 +1,5 @@
-from pydantic import BaseModel, field_validator
-from datetime import datetime, timezone
+from pydantic import BaseModel
+from datetime import datetime
 from app.schemas.user import UserResponse
 
 
@@ -22,12 +22,6 @@ class ReferralCodeResponse(ReferralCodeBase):
 
     class Config:
         from_attributes = True
-
-    @field_validator('expires_at')
-    def check_expires_at(cls, expires_at: datetime) -> datetime:
-        if expires_at and expires_at < datetime.now(timezone.utc):
-            cls.active = False
-        return expires_at
 
 
 class ReferralsResponse(BaseModel):

@@ -49,7 +49,8 @@ async def сreate_user_by_refcode(
     Регистрирует пользователя по реферальному коду.
     Args:
         user_data (UserCreateByRefCode): Данные для регистрации с реферальным кодом.
-        db (AsyncSession, optional): Сессия базы данных. По умолчанию создаётся через Depends(get_db).
+        db (AsyncSession, optional): Сессия базы данных.
+        По умолчанию создаётся через Depends(get_db).
     """
     service = UserService(db)
     new_user = await service.create_user_by_refcode(user_data)
@@ -70,7 +71,8 @@ async def login(
     Аутентифицирует пользователя и выдает JWT-токен.
     Args:
         form_data (OAuth2PasswordRequestForm): Данные для аутентификации (email и пароль).
-        db (AsyncSession, optional): Сессия базы данных. По умолчанию создаётся через Depends(get_db).
+        db (AsyncSession, optional): Сессия базы данных.
+        По умолчанию создаётся через Depends(get_db).
     """
     user_service = UserService(db)
     user = await user_service.get_user_by_email(form_data.username)
@@ -141,10 +143,11 @@ async def activate_referral_code(
     redis_client: Redis = Depends(get_redis)
 ):
     service = ReferralCodeService(db, redis_client)
-    if await service.has_user_active_referral_code(referral_code.owner_id):
+    if await service.has_user_active_referral_code(referral_code.owner_id) or \
+            referral_code.is_code_expired():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User has an active referral code already"
+            detail="User has an active referral code already or code is expired"
         )
     active_referral_code = await service.activate_referral_code(referral_code)
     return active_referral_code

@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, ForeignKey, DateTime
-from datetime import datetime
 
 from app.db.base import Base
 
@@ -20,3 +20,7 @@ class ReferralCode(Base):
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     owner: Mapped["User"] = relationship("User", back_populates="referral_code")
+
+    def is_code_expired(self):
+        """Обновление поля active при проверке срока реф. кода"""
+        return self.expires_at <= datetime.now(timezone.utc)

@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -19,6 +20,7 @@ class ReferralCodeService:
         self, referral_code: ReferralCodeCreate,
         current_user_id: int
     ) -> ReferralCode:
+        """Создание нового реферального кода"""
         new_referral_code = ReferralCode(**referral_code.model_dump(), owner_id=current_user_id)
         self.db.add(new_referral_code)
         await self.db.commit()
@@ -27,6 +29,7 @@ class ReferralCodeService:
         return new_referral_code
 
     async def get_user_referral_codes(self, owner_id: int) -> UserRefCodes:
+        """Получение всех реферальных кодов пользователя"""
         if self.redis_client:
             cache_key = f"user:{owner_id}:refcodes"
             cached_data = await self.redis_client.get(cache_key)
@@ -38,6 +41,12 @@ class ReferralCodeService:
             select(ReferralCode).where(ReferralCode.owner_id == owner_id)
         )
         referral_codes = result.scalars().all()
+
+        for refcode in referral_codes:
+            if refcode.is_code_expired():
+                refcode.active = False
+                await self.db.commit()
+
         refcodes_pydantic = [
             ReferralCodeResponse.model_validate(refcode) for refcode in referral_codes
         ]
@@ -55,21 +64,25 @@ class ReferralCodeService:
             await self.redis_client.delete(cache_key)
 
     async def get_referral_code_by_code(self, code: str) -> ReferralCode:
+        """Получение данных о реферельном код через сам код"""
         result = await self.db.execute(select(ReferralCode).where(ReferralCode.code == code))
         referral_code = result.scalars().first()
         return referral_code
 
     async def get_referral_code_by_id(self, code_id: int) -> ReferralCode:
+        """Получение данных о реферельном код через его id"""
         referral_code = await self.db.get(ReferralCode, code_id)
         return referral_code
 
     async def has_user_active_referral_code(self, owner_id: int) -> bool:
+        """Проверка есть ли у пользователя активный код"""
         result = await self.db.execute(
             select(exists().where(ReferralCode.owner_id == owner_id, ReferralCode.active is True))
         )
         return result.scalar()
 
     async def activate_referral_code(self, referral_code: ReferralCode) -> ReferralCode:
+        """Активация реферального кода"""
         referral_code.active = True
         await self.db.commit()
         await self.db.refresh(referral_code)
@@ -77,6 +90,7 @@ class ReferralCodeService:
         return referral_code
 
     async def delete_referral_code(self, referral_code: ReferralCode) -> dict:
+        """Удаление реферльного кода"""
         await self.db.delete(referral_code)
         await self.db.commit()
         await self.clear_user_referral_codes_cache(referral_code.owner_id)
@@ -98,6 +112,9 @@ class ReferralCodeService:
         return referral_code
 
     async def get_invited_users_by_referrer_id(self, referrer_id: int) -> dict:
+        """
+        Получает всех рефералов через id реферера.
+        """
         user = await self.db.get(User, referrer_id)
         if user is None:
             raise ValueError("User not found")
