@@ -129,7 +129,7 @@ async def activate_referral_code(
     return active_referral_code
 
 
-@router.get("/refcodes/by-email/{email}", response_model=ReferralCodeResponse)
+@router.get("/refcodes/{email}", response_model=ReferralCodeResponse)
 async def get_referral_code_by_email(
     email: str,
     db: AsyncSession = Depends(get_db),

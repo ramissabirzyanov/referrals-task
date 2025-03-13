@@ -108,14 +108,18 @@ class ReferralCodeService:
         return referral_code
 
 
-    async def get_invited_users_by_referrer_id(self, referrer_id: int) -> ReferralsResponse:
+    async def get_invited_users_by_referrer_id(self, referrer_id: int) -> dict:
         user = await self.db.get(User, referrer_id)
+        if user is None:
+            raise ValueError("User not found")
+        
         result = await self.db.execute(
             select(User)
             .where(User.invited_by_id == referrer_id)
         )
         invited_users = result.scalars().all()
-        return ReferralsResponse(
-            user=UserResponse.model_validate(user),
-            invited_users=[UserResponse.model_validate(user) for user in invited_users]
-        )
+        
+        return {
+            "user": user,
+            "invited_users": invited_users
+        }

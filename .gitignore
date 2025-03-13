@@ -1,3 +1,5 @@
 __pycache__
 keys/
 .env
+.flake8
+dump.rdb

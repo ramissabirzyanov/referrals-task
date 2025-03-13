@@ -18,6 +18,9 @@ bcrypt = "^4.3.0"
 redis = "^5.2.1"
 
 
+[tool.poetry.group.dev.dependencies]
+flake8 = "^7.1.2"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
