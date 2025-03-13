@@ -38,7 +38,11 @@ def decode_jwt(
     Декодирует JWT токен и возвращает данные.
     """
     try:
-        decoded = jwt.decode(token, public_key, algorithms=[algorithm], options={"verify_exp": True})
+        decoded = jwt.decode(
+            token, public_key,
+            algorithms=[algorithm],
+            options={"verify_exp": True}
+        )
         return decoded
     except jwt.InvalidTokenError as e:
         raise ValueError("Invalid token") from e

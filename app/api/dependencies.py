@@ -13,9 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
+
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
     try:
-        payload = decode_jwt(token) 
+        payload = decode_jwt(token)
         email: str = payload.get("sub")
 
         if email is None:
@@ -39,16 +40,22 @@ async def check_existing_and_owner_referral_code(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ReferralCode:
-    
+
     """Проверяет существование реферального кода и его принадлежность пользователю"""
 
     service = ReferralCodeService(db)
     referral_code = await service.get_referral_code_by_id(code_id)
 
     if not referral_code:
-        raise HTTPException(status_code=404, detail="Referral code not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Referral code not found"
+        )
 
     if referral_code.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied: You do not own this referral code")
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: You do not own this referral code"
+        )
 
     return referral_code

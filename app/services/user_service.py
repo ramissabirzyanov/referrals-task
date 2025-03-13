@@ -28,21 +28,20 @@ class UserService:
     async def get_user_by_id(self, user_id: int) -> User:
         result = await self.db.execute(select(User).where(User.id == user_id))
         return result.scalars().first()
-  
 
     async def create_user_by_refcode(self, user: UserCreateByRefCode) -> Optional[User]:
         result = await self.db.execute(
             select(ReferralCode)
-            .where(ReferralCode.code == user.referral_code, ReferralCode.active == True)
+            .where(ReferralCode.code == user.referral_code, ReferralCode.active is True)
             .options(
                 selectinload(ReferralCode.owner).selectinload(User.invited_users)
             )
         )
         referral_code = result.scalars().first()
-        
+
         if not referral_code:
             return None
-        
+
         new_user = await self.create_user(user)
         new_user.invited_by_id = referral_code.owner_id
         referral_code.owner.invited_users.append(new_user)

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 class ReferralCode(Base):
     __tablename__ = "referral_codes"
-    
+
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     active: Mapped[bool] = mapped_column(default=False)

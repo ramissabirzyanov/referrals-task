@@ -11,23 +11,24 @@ if TYPE_CHECKING:
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     invited_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
-    referral_code: Mapped[list["ReferralCode"]] = relationship("ReferralCode", back_populates="owner")
+    referral_code: Mapped[list["ReferralCode"]] = relationship(
+        "ReferralCode", back_populates="owner"
+    )
     invited_users: Mapped[list["User"]] = relationship(
-        "User", 
-        back_populates="invited_by", 
+        "User",
+        back_populates="invited_by",
         remote_side=[invited_by_id],
-        #foreign_keys="User.invited_by_id",
         lazy="selectin"
     )
     invited_by: Mapped["User"] = relationship(
         "User",
-        back_populates="invited_users", 
+        back_populates="invited_users",
         remote_side=[id],
         lazy="selectin"
     )

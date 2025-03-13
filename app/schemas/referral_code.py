@@ -22,7 +22,7 @@ class ReferralCodeResponse(ReferralCodeBase):
 
     class Config:
         from_attributes = True
-    
+
     @field_validator('expires_at')
     def check_expires_at(cls, expires_at: datetime) -> datetime:
         if expires_at and expires_at < datetime.now(timezone.utc):
@@ -40,6 +40,6 @@ class ReferralsResponse(BaseModel):
 
 class UserRefCodes(BaseModel):
     referral_codes: list[ReferralCodeResponse]
-    
+
     class Config:
         from_attributes = True
